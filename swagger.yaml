@@ -1,0 +1,944 @@
+openapi: 3.0.3
+info:
+  title: Payment API
+  version: 1.0.0
+  description: API для интеграции с Fable
+servers:
+  - url: https://api.example.com/v1
+tags:
+  - name: currency
+  - name: application
+  - name: webhooks
+
+components:
+  securitySchemes:
+    OAuth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://auth.example.com/oauth2/authorize
+          tokenUrl: https://auth.example.com/oauth2/token
+
+  schemas:
+    ApplicationResponse:
+      type: object
+      properties:
+        application:
+          type: object
+          description: Информация о заявке
+          properties:
+            id:
+              type: string
+              format: uuid
+              description: Уникальный идентификатор заявки в системе обработчике заявки
+              example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+            invoice_number:
+              type: string
+              description: Номер инвойса заявки
+              example: "HSDG1762"
+            payment_name:
+              type: string
+              description: Название платежа
+              example: "Оплата за товары по контракту"
+            amount:
+              type: string
+              description: Сумма платежа
+              example: "26383.000"
+            currency:
+              type: object
+              description: Информация о валюте
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                  description: Уникальный идентификатор валюты
+                  example: "4a4f0f70-29c3-4c6b-8590-92db4102dda0"
+                code:
+                  type: string
+                  description: Код валюты (например, USD, EUR)
+                  example: "USD"
+                symbol:
+                  type: string
+                  description: Символ валюты (например, $, €)
+                  example: "$"
+                name:
+                  type: string
+                  description: Полное название валюты (например, US Dollar)
+                  example: "Доллар"
+                exchange_rate:
+                  type: string
+                  description: Обменный курс валюты
+                  example: "100.0200"
+            exchange_rate:
+              type: string
+              description: Обменный курс, применяемый к заявке
+              example: "100.02000"
+            deposit:
+              type: string
+              description: Сумма депозита
+              example: "2638827.660"
+            fee:
+              type: string
+              description: Комиссия за обработку заявки
+              example: "184717.936"
+            swift_translation_reference:
+              type: string
+              description: Референс SWIFT перевода
+              example: "234324324"
+            status:
+              type: string
+              description: Текущий статус заявки
+              enum: [on_inspect - проверка заявки, confirmation - оплата, queued_for_payout - в очереди на выплату, payout - выплата, done - выполнена, rejected - отмена]
+              example: "on_inspect"
+            recipient:
+              type: object
+              description: Информация о получателе
+              properties:
+                recipient:
+                  type: string
+                  description: ФИО получателя или название компании
+                  example: "Пономарев Януарий Захарьевич"
+                country:
+                  type: string
+                  description: Страна получателя
+                  example: "Германия"
+                city:
+                  type: string
+                  description: Город получателя
+                  example: "г. Беслан"
+                iban:
+                  type: string
+                  description: Международный номер банковского счета (IBAN) получателя
+                  example: "NL02ABNA6435690758"
+                address:
+                  type: string
+                  description: Адрес получателя
+                  example: "Республика Беларусь, город Минск улица мира 24 офис 35"
+            bank:
+              type: object
+              description: Информация о банке получателя
+              properties:
+                swift:
+                  type: string
+                  description: SWIFT/BIC код банка
+                  example: "NJDHRU3Y"
+                name:
+                  type: string
+                  description: Название банка
+                  example: "Братский АНКБ"
+                address:
+                  type: string
+                  description: Адрес банка
+                  example: "ст. Ессентуки, бул. Братский, д. 8/1 стр. 3/5, 526474"
+            created_at:
+              type: string
+              format: date-time
+              description: Дата и время создания заявки
+              example: "2025-02-24T06:33:04.766"
+            payment_date:
+              type: string
+              format: date-time
+              description: Предполагаемая дата и время совершения платежа
+              example: "2025-02-24T06:33:04.766"
+            payment_due_date: 
+              type: string
+              format: date-time
+              description: Дата и время совершения платежа
+              example: "2025-02-24T06:33:04.766"
+            application_number:
+              type: integer
+              description: Номер заявки
+              example: "894"
+            contract_number:
+              type: number
+              description: Номер контракта, связанного с заявкой
+              example: "fgdf123"
+
+paths:
+  /clients/currencies:
+    get:
+      tags:
+        - currency
+      summary: Получить список валют и курс обмена
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  currencies:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                          description: Уникальный идентификатор валюты
+                        code:
+                          type: string
+                          description: Код валюты
+                        symbol:
+                          type: string
+                          description: Символ валюты
+                        name:
+                          type: string
+                          description: Название валюты
+                        exchange_rate:
+                          type: string
+                          description: Курс обмена
+        '400':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Ошибка
+                  message:
+                    type: string
+                    description: Описание
+        '401':
+          description: Ошибка авторизации
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Ошибка
+                  message:
+                    type: string
+                    description: Описание
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Ошибка
+                  message:
+                    type: string
+                    description: Описание
+  /clients/currencies/{code}:
+    get:
+      tags:
+        - currency
+      summary: Получить курс обмена интересуемой валюты
+      parameters:
+        - name: currency_code
+          in: path
+          description: Код валюты
+          required: true
+          schema:
+            type: string
+            example: "USD"
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  currency:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                          description: Уникальный идентификатор валюты
+                        code:
+                          type: string
+                          description: Код валюты
+                        symbol:
+                          type: string
+                          description: Символ валюты
+                        name:
+                          type: string
+                          description: Название валюты
+                        exchange_rate:
+                          type: string
+                          description: Курс обмена
+        '400':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Ошибка
+                  message:
+                    type: string
+                    description: Описание
+        '401':
+          description: Ошибка авторизации
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Ошибка
+                  message:
+                    type: string
+                    description: Описание
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Ошибка
+                  message:
+                    type: string
+                    description: Описание
+
+  /clients/applications:
+    post:
+      tags:
+        - application
+      summary: Создать заявку на перевод
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                invoice_number:
+                  type: string
+                  description: Номер заявки
+                  example: "123743149"
+                payment_name:
+                  type: string
+                  description: Название заявки
+                  example: "Предолата за 1 поставку техники"
+                amount:
+                  type: number
+                  description: Сумма платежа (ge=0.001, lt=1000000000000)
+                  example: "9835.50"
+                currency_code:
+                  type: string
+                  description: Код валюты (например, USD, EUR)
+                  example: "CNY"
+                deposit:
+                  type: number
+                  description: Сумма депозита (ge=0.001, lt=1000000000000)
+                  example: "1081850.50"
+                fee:
+                  type: number
+                  description: Комиссия за перевод (ge=0.001, lt=10000000)
+                  example: "75729.50"
+                recipient:
+                  type: string
+                  description: ФИО получателя или название организации
+                  example: Крикунов Григорий Сергеевич
+                recipient_country:
+                  type: string
+                  description: Страна получателя
+                  example: Бразилия
+                recipient_city:
+                  type: string
+                  description: Город получателя
+                  example: Рио-де-Жанейро
+                recipient_iban:
+                  type: string
+                  description: IBAN получателя
+                  example: NL57ABNA2892233402
+                recipient_address:
+                  type: string
+                  description: Адрес получателя
+                  example: Nyamasheke
+                bank_swift:
+                  type: string
+                  description: SWIFT-код банка
+                  example: ANAKAGMMXXX
+                bank_name:
+                  type: string
+                  description: Название банка
+                  example: Banco do Brasil S.A.
+                bank_address:
+                  type: string
+                  description: Адрес банка
+                  example: Saun Quadra 05, Lote B Ed. Bb, Asa Norte, Brasilia, Goias
+                contract_number:
+                  type: integer
+                  description: Номер контракта
+                  example: fgdf123
+      responses:
+        '200':
+          description: Успешное создание заявки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationResponse'
+        '400':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          description: Ошибка авторизации
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+
+  /clients/applications/{application_id}:
+    get:
+      tags:
+        - application
+      summary: Получить статус заявки по ID
+      description: Возвращает статус заявки по указанному ID
+      parameters:
+        - name: application_id
+          in: path
+          description: Уникальный идентификатор заявки
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: "3fa85f64-5717-4504-b3fc-2c963f66afa6"
+      responses:
+        '200':
+          description: Успешный ответ с деталями статуса заявки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationResponse'
+        '400':
+          description: Неверный запрос
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid request"
+                  message:
+                    type: string
+                    example: "The provided application_id is invalid."
+        '404':
+          description: Заявка не найдена
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Not Found"
+                  message:
+                    type: string
+                    example: "Application with the specified ID was not found."
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Internal Server Error"
+                  message:
+                    type: string
+                    example: "An unexpected error occurred while processing your request."
+  
+  /clients/applications/:
+    get:
+      tags:
+        - application
+      summary: Получить все отправляемые заявки
+      description: Возвращает список всех заявок
+      parameters:
+        - name: start_time
+          in: query
+          description: Начальное время для фильтрации заявок
+          example: "2025-02-21T11:26:30.317"
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: end_time
+          in: query
+          description: Конечное время для фильтрации заявок
+          example: "2025-02-22T11:26:30.317"
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          description: Максимальное количество заявок для возврата (ge=1, le=50, default=20)
+          example: 20
+          required: false
+          schema:
+            type: integer
+            format: int32
+        - name: page
+          in: query
+          description: Номер страницы для пагинации (ge=0, le=1000, default=0)
+          example: 0
+          required: false
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Успешный ответ с массивом заявок
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  applications:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        application_id:
+                          type: string
+                          format: uuid
+                          example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                        created_at:
+                          type: string
+                          format: date-time
+                          example: "2025-02-21T11:26:30.317"
+        '400':
+          description: Неверный запрос
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid request"
+                  message:
+                    type: string
+                    example: "The provided application_id is invalid."
+        '404':
+          description: Заявка не найдена
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Not Found"
+                  message:
+                    type: string
+                    example: "Application with the specified ID was not found."
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Internal Server Error"
+                  message:
+                    type: string
+                    example: "An unexpected error occurred while processing your request."
+  /webhooks:
+    get:
+      tags:
+        - webhooks
+      summary: Получить все уведомления вебхуков
+      description: Возвращает список уведомлений вебхуков в пределах заданного временного диапазона с пагинацией.
+      parameters:
+        - name: start_time
+          in: query
+          description: Начальное время для фильтрации уведомлений
+          example: "2025-02-21T11:26:30.317"
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: end_time
+          in: query
+          description: Конечное время для фильтрации уведомлений
+          example: "2025-02-22T11:26:30.317"
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          description: Максимальное количество уведомлений для возврата (ge=1, le=50, default=20)
+          example: 20
+          required: false
+          schema:
+            type: integer
+            format: int32
+        - name: page
+          in: query
+          description: Номер страницы для пагинации (ge=0, le=1000, default=0)
+          example: 0
+          required: false
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Успешный ответ с массивом уведомлений вебхуков
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  webhooks:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        webhook_id:
+                          type: string
+                          format: uuid
+                          example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                        created_at:
+                          type: string
+                          format: date-time
+                          example: "2025-02-21T11:26:30.317"
+        '400':
+          description: Неверный запрос
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid request parameters"
+                  message:
+                    type: string
+                    example: "The provided start_time or end_time is invalid."
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Internal Server Error"
+                  message:
+                    type: string
+                    example: "An unexpected error occurred while processing your request."
+
+  /webhooks/{webhook_id}:
+    get:
+      tags:
+        - webhooks
+      summary: Получить уведомление вебхука по ID
+      description: Возвращает детали уведомления вебхука по указанному ID.
+      parameters:
+        - name: webhook_id
+          in: path
+          description: Уникальный идентификатор уведомления вебхука
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+      responses:
+        '200':
+          description: Успешный ответ с деталями уведомления вебхука
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  webhook_id:
+                    type: string
+                    format: uuid
+                  created_at:
+                    type: string
+                    format: date-time
+                    example: "2025-02-24T06:33:04.766"
+                  application:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        description: ID заявки
+                      status:
+                        type: string
+                        description: Статус заявки
+                        enum:
+                          - on_inspect
+                          - confirmation
+                          - queued_for_payout
+                          - payout
+                          - done
+                          - rejected
+                      description:
+                        type: string
+                        description: Описание (при наличии, например, причина отклонения заявки)
+                    required:
+                      - id
+                      - status
+                required:
+                  - webhook_id
+                  - created_at
+                  - id
+                  - status
+                oneOf:
+                  - description: "Статус 'done' требует заполнения полей payment_date, payment_due_date и swift_translation_reference."
+                    properties:
+                      application:
+                        properties:
+                          status:
+                            example: "done"
+                            enum:
+                              - done
+                          payment_date:
+                            type: string
+                            format: date-time
+                            description: Предполагаемая дата и время совершения платежа
+                            example: "2025-02-24T06:33:04.766"
+                          payment_due_date: 
+                            type: string
+                            format: date-time
+                            description: Дата и время совершения платежа
+                            example: "2025-02-24T06:33:04.766"
+                          swift_translation_reference:
+                            type: string
+                            description: Референс SWIFT перевода
+                            example: "234324324" 
+                    required:
+                      - payment_date
+                      - payment_due_date
+                      - swift_translation_reference
+                  - description: "Статус 'payout' требует заполнения поля payment_date."
+                    properties:
+                      application:
+                        properties:
+                          status:
+                            example: "payout"
+                            enum:
+                              - payout
+                          payment_date:
+                            type: string
+                            format: date-time
+                            description: Предполагаемая дата и время совершения платежа
+                            example: "2025-02-24T06:33:04.766"
+                    required:
+                      - payment_date
+        '400':
+          description: Неверный запрос
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid request"
+                  message:
+                    type: string
+                    example: "The provided webhook_id is invalid."
+        '404':
+          description: Уведомление вебхука не найдено
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Not Found"
+                  message:
+                    type: string
+                    example: "Webhook notification with the specified ID was not found."
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Internal Server Error"
+                  message:
+                    type: string
+                    example: "An unexpected error occurred while processing your request."
+
+  /webhook/status-update:
+    post:
+      tags:
+        - webhooks
+      summary: Вебхук для обновления статуса заявки
+      description: <p>Получатель подписывается на вебхук, и мы отправляем уведомления при изменении статуса заявки.</p> <p>Кастомный заголовок - Fable дополнительно подписывает уведомления вебхуков, которые отправляются на ваши конечные точки. Это делается путём включения токена в заголовок `x-security-token` каждого события. Это позволяет вам убедиться, что события были отправлены именно Fable, а не третьей стороной. Вы можете определить свой кастомный заголовок в панели управления.</p> <p>Белый список IP-адресов.Вы можете добавить IP-адрес Fable, с которого отправляются вебхуки, в белый список. Пожалуйста, свяжитесь с нашей службой поддержки, чтобы получить этот IP-адрес.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                webhook_id:
+                  type: string
+                  format: uuid
+                created_at:
+                  type: string
+                  format: date-time
+                  example: "2025-02-24T06:33:04.766"
+                application:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                      description: ID заявки
+                    status:
+                      type: string
+                      description: Статус заявки
+                      enum:
+                        - on_inspect
+                        - confirmation
+                        - queued_for_payout
+                        - payout
+                        - done
+                        - rejected
+                    description:
+                      type: string
+                      description: Описание (при наличии, например, причина отклонения заявки)
+                  required:
+                    - id
+                    - status
+              required:
+                - webhook_id
+                - created_at
+                - id
+                - status
+              oneOf:
+                - description: "Статус 'done' требует заполнения полей payment_date, payment_due_date и swift_translation_reference."
+                  properties:
+                    application:
+                      properties:
+                        status:
+                          example: "done"
+                          enum:
+                            - done
+                        payment_date:
+                          type: string
+                          format: date-time
+                          description: Предполагаемая дата и время совершения платежа
+                          example: "2025-02-24T06:33:04.766"
+                        payment_due_date: 
+                          type: string
+                          format: date-time
+                          description: Дата и время совершения платежа
+                          example: "2025-02-24T06:33:04.766"
+                        swift_translation_reference:
+                          type: string
+                          description: Референс SWIFT перевода
+                          example: "234324324" 
+                  required:
+                    - payment_date
+                    - payment_due_date
+                    - swift_translation_reference
+                - description: "Статус 'payout' требует заполнения поля payment_date."
+                  properties:
+                    application:
+                      properties:
+                        status:
+                          example: "payout"
+                          enum:
+                            - payout
+                        payment_date:
+                          type: string
+                          format: date-time
+                          description: Предполагаемая дата и время совершения платежа
+                          example: "2025-02-24T06:33:04.766"
+                  required:
+                    - payment_date
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                required:
+                  - success
+                  - message
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+                required:
+                  - error
+                  - message
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+                required:
+                  - error
+                  - message
