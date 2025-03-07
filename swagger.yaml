@@ -130,6 +130,10 @@ components:
                   type: string
                   description: Адрес банка
                   example: "ст. Ессентуки, бул. Братский, д. 8/1 стр. 3/5, 526474"
+            created_by:
+              type: string
+              description: Автор (юзер или компания) создания заявки на перевод средств
+              example: user_45682034-0954-3284-1203-127634920381
             created_at:
               type: string
               format: date-time
@@ -140,7 +144,7 @@ components:
               format: date-time
               description: Предполагаемая дата и время совершения платежа
               example: "2025-02-24T06:33:04.766"
-            payment_due_date: 
+            payment_due_date:
               type: string
               format: date-time
               description: Дата и время совершения платежа
@@ -228,6 +232,7 @@ paths:
                   message:
                     type: string
                     description: Описание
+
   /clients/currencies/{code}:
     get:
       tags:
@@ -320,6 +325,11 @@ paths:
             schema:
               type: object
               properties:
+                created_by:
+                  type: string
+                  description: Автор (юзер или компания) создания заявки на перевод средств
+                  example: "user_45682034-0954-3284-1203-127634920381"
+                  maxLength: 255
                 invoice_number:
                   type: string
                   description: Номер заявки
@@ -482,7 +492,7 @@ paths:
                   message:
                     type: string
                     example: "An unexpected error occurred while processing your request."
-  
+
   /clients/applications/:
     get:
       tags:
@@ -490,6 +500,13 @@ paths:
       summary: Получить все отправляемые заявки
       description: Возвращает список всех заявок
       parameters:
+        - name : created_by
+          in: query
+          description: Автор (юзер или компания) создания заявки на перевод средств. Если данное поле будет не заполнено - будут направлены заявки создаваемые всеми юзерами/компаниями, поступающие от партнёра
+          example: user_45682034-0954-3284-1203-127634920381
+          required: false
+          schema:
+            type: string
         - name: start_time
           in: query
           description: Начальное время для фильтрации заявок
@@ -539,6 +556,10 @@ paths:
                           type: string
                           format: uuid
                           example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                        created_by:
+                          type: string
+                          description: Автор (юзер или компания) создания заявки на перевод средств
+                          example: user_45682034-0954-3284-1203-127634920381
                         created_at:
                           type: string
                           format: date-time
@@ -582,6 +603,7 @@ paths:
                   message:
                     type: string
                     example: "An unexpected error occurred while processing your request."
+
   /webhooks:
     get:
       tags:
@@ -741,7 +763,7 @@ paths:
                             format: date-time
                             description: Предполагаемая дата и время совершения платежа
                             example: "2025-02-24T06:33:04.766"
-                          payment_due_date: 
+                          payment_due_date:
                             type: string
                             format: date-time
                             description: Дата и время совершения платежа
@@ -749,7 +771,7 @@ paths:
                           swift_translation_reference:
                             type: string
                             description: Референс SWIFT перевода
-                            example: "234324324" 
+                            example: "234324324"
                     required:
                       - payment_date
                       - payment_due_date
@@ -871,7 +893,7 @@ paths:
                           format: date-time
                           description: Предполагаемая дата и время совершения платежа
                           example: "2025-02-24T06:33:04.766"
-                        payment_due_date: 
+                        payment_due_date:
                           type: string
                           format: date-time
                           description: Дата и время совершения платежа
@@ -879,7 +901,7 @@ paths:
                         swift_translation_reference:
                           type: string
                           description: Референс SWIFT перевода
-                          example: "234324324" 
+                          example: "234324324"
                   required:
                     - payment_date
                     - payment_due_date
